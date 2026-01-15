@@ -10,6 +10,9 @@ from app.config import settings
 
 from celery.result import AsyncResult
 
+from app.tasks import fetch_and_save_users
+from app.celery_app import ping
+
 app = FastAPI(
     title="User API",
     description="API for saving user information in csv"
@@ -50,7 +53,7 @@ def health_check():
 
 @app.post("/fetch-users", response_model=TaskResponse)
 def trigger_fetch_user():
-    task = fetch_and_save_user.delay()
+    task = fetch_and_save_users.delay()
     return TaskResponse(
         task_id=task.id,
         status="pending",
@@ -58,7 +61,7 @@ def trigger_fetch_user():
     )
 
 @app.get("/task/{task_id}", response_model=TaskStatusResponse)
-def get_task_info(task_id: int):
+def get_task_info(task_id: str):
     result = AsyncResult(task_id)
     return TaskStatusResponse(
         task_id=task_id,
