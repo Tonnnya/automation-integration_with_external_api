@@ -9,7 +9,6 @@ from celery.result import AsyncResult
 import httpx
 import os
 
-from app.celery_app import celery_app
 from app.config import settings
 
 logging.basicConfig(level=logging.INFO)
@@ -22,7 +21,7 @@ logger = logging.getLogger(__name__)
     default_retry_delay=60
 )
 
-def fetch_and_save_users(self) -> dict:
+def fetch_and_save_users(self) -> Dict[str, any]:
     try:
         logger.info("Fetching users from the API…")
 
@@ -33,7 +32,7 @@ def fetch_and_save_users(self) -> dict:
             return {
                 "status": "warning",
                 "message": "There are no users to save",
-                "users_count": 0,
+                "user_count": 0,
                 "timestamp": datetime.now().isoformat()
             }
 

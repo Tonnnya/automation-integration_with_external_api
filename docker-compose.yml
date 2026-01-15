@@ -1,7 +1,7 @@
 version: '3.8'
 
 services:
-  # Redis
+  # Redis - брокер повідомлень для Celery
   redis:
     image: redis:7-alpine
     container_name: user_fetcher_redis
@@ -17,7 +17,7 @@ services:
     networks:
       - app_network
 
-  # FastAPI
+  # FastAPI додаток
   fastapi:
     build: .
     container_name: user_fetcher_api
@@ -40,7 +40,7 @@ services:
       - app_network
     restart: unless-stopped
 
-  # Celery Worker
+  # Celery Worker - виконує задачі
   celery_worker:
     build: .
     container_name: user_fetcher_worker
@@ -49,6 +49,46 @@ services:
       - ./app:/app/app
       - ./data:/app/data
       - ./.env:/app/.env
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - app_network
+    restart: unless-stopped
+
+  # Celery Beat - планувальник задач (cron)
+  celery_beat:
+    build: .
+    container_name: user_fetcher_beat
+    command: celery -A app.celery_app beat --loglevel=info
+    volumes:
+      - ./app:/app/app
+      - ./data:/app/data
+      - ./.env:/app/.env
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - app_network
+    restart: unless-stopped
+
+  # Flower - веб-інтерфейс для моніторингу Celery (опціонально)
+  flower:
+    build: .
+    container_name: user_fetcher_flower
+    command: celery -A app.celery_app flower --port=5555
+    ports:
+      - "5555:5555"
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
